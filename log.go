@@ -73,12 +73,29 @@ func (l *Logger) Write(level Level, message string, attrs ...Attr) {
 	if level > l.logLevel {
 		return
 	}
+	l.buffer.b = append(l.buffer.b, "{\"message\":\""...)
 	l.buffer.b = append(l.buffer.b, message...)
+	l.buffer.b = append(l.buffer.b, "\",\"level\":\""...)
+	l.buffer.b = levelToBytes(l.buffer.b, level)
+	l.buffer.b = append(l.buffer.b, '"')
 	l.buffer.b = attrsToJson(l.buffer.b, attrs...)
+	l.buffer.b = append(l.buffer.b, '}')
 	if _, err := l.writer.Write(l.buffer.b); err != nil {
 		log.Printf("cannot write message to logfile: %v", err)
 	}
 	l.buffer.b = l.buffer.b[:0]
+}
+
+func levelToBytes(b []byte, l Level) []byte {
+	switch l {
+	case LevelError:
+		return append(b, "ERROR"...)
+	case LevelWarning:
+		return append(b, "WARNING"...)
+	case LevelDebug:
+		return append(b, "DEBUG"...)
+	}
+	return append(b, "UNKNOWN"...)
 }
 
 func (l *Logger) Error(message string, attrs ...Attr) {
@@ -103,7 +120,7 @@ func String(name, s string) Attr {
 
 func attrsToJson(b []byte, attrs ...Attr) []byte {
 	for _, attr := range attrs {
-		b = append(b, '"')
+		b = append(b, ',', '"')
 		b = append(b, attr.name...)
 		b = append(b, '"', ':')
 
