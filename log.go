@@ -8,6 +8,7 @@ import (
 var bufferPool = make(chan *buffer, 10)
 
 type buffer struct {
+	f int
 	b []byte
 }
 
@@ -29,6 +30,7 @@ func acquireBuff() *buffer {
 }
 
 func releaseBuff(b *buffer) {
+	b.f = 0
 	b.b = b.b[:0]
 
 	select {
@@ -41,12 +43,23 @@ func releaseBuff(b *buffer) {
 	}
 }
 
+func (b *buffer) prepare() {
+	b.b = b.b[:b.f]
+}
+
+func (b *buffer) fix(data ...byte) {
+	b.f += len(data)
+	b.b = append(b.b, data...)
+}
+
 func New(writer io.Writer, level Level) *Logger {
-	return &Logger{
+	var l = Logger{
 		writer:   writer,
 		buffer:   acquireBuff(),
 		logLevel: level,
 	}
+	l.buffer.fix('{')
+	return &l
 }
 
 type (
@@ -73,7 +86,7 @@ func (l *Logger) Write(level Level, message string, attrs ...Attr) {
 	if level > l.logLevel {
 		return
 	}
-	l.buffer.b = append(l.buffer.b, "{\"message\":\""...)
+	l.buffer.b = append(l.buffer.b, "\"message\":\""...)
 	l.buffer.b = append(l.buffer.b, message...)
 	l.buffer.b = append(l.buffer.b, "\",\"level\":\""...)
 	l.buffer.b = levelToBytes(l.buffer.b, level)
@@ -83,7 +96,7 @@ func (l *Logger) Write(level Level, message string, attrs ...Attr) {
 	if _, err := l.writer.Write(l.buffer.b); err != nil {
 		log.Printf("cannot write message to logfile: %v", err)
 	}
-	l.buffer.b = l.buffer.b[:0]
+	l.buffer.prepare()
 }
 
 func levelToBytes(b []byte, l Level) []byte {
@@ -142,6 +155,18 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 		}
 	}
 	return b
+}
+
+func (l *Logger) WithAttrs(attrs ...Attr) *Logger {
+	var b = *l.buffer
+	var logger = Logger{
+		writer:   l.writer,
+		buffer:   &b,
+		logLevel: l.logLevel,
+	}
+	logger.buffer.fix(attrsToJson(make([]byte, 0, 256), attrs...)[1:]...) // todo ALLOC HERE
+	logger.buffer.fix(',')
+	return &logger
 }
 
 func (l *Logger) Close() {
