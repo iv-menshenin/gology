@@ -173,6 +173,18 @@ func Test_Attrs(t *testing.T) {
 		log.Close()
 	})
 
+	t.Run("bad strings", func(t *testing.T) {
+		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
+		var log = New(writer, LevelDebug)
+		log.Error("something \"went\" wrong", String("info", "foo \"bar\""))
+		testResult(t, writer.Bytes(), map[string]interface{}{
+			"level":   "ERROR",
+			"message": "something \"went\" wrong",
+			"info":    "foo \"bar\"",
+		})
+		log.Close()
+	})
+
 }
 
 func Test_WithCascade(t *testing.T) {
@@ -323,10 +335,10 @@ func Test_CloseLog(t *testing.T) {
 func testResult(t *testing.T, got []byte, want map[string]interface{}) {
 	var i map[string]interface{}
 	if err := json.Unmarshal(got, &i); err != nil {
-		t.Error(err)
+		t.Fatalf("error unmarshalling: %s\ndata: %s", err, string(got))
 	}
 	if !mapMatch(i, want) {
-		t.Errorf("matching error\na1: %+v\na2: %+v", want, i)
+		t.Errorf("matching error\n extra got: %+v\nextra want: %+v", want, i)
 	}
 }
 

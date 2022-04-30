@@ -84,7 +84,7 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 
 		case attr.str != "":
 			b = append(b, '"')
-			b = append(b, attr.str...)
+			b = safeStringAppend(b, attr.str)
 			b = append(b, '"')
 
 		case attr.int != 0:
@@ -123,4 +123,16 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 
 	}
 	return b
+}
+
+func safeStringAppend(b []byte, s string) []byte {
+	var l int
+	for i, n := range s {
+		if n == '"' {
+			b = append(b, s[l:i]...)
+			b = append(b, '\\', '"')
+			l = i + 1
+		}
+	}
+	return append(b, s[l:]...)
 }

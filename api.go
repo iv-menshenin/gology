@@ -54,7 +54,7 @@ func (l Logger) Write(level Level, message string, attrs ...Attr) {
 		buffer = append(buffer, ',')
 	}
 	buffer = append(buffer, "\"message\":\""...)
-	buffer = append(buffer, message...)
+	buffer = safeStringAppend(buffer, message)
 	buffer = append(buffer, "\",\"level\":\""...)
 	buffer = levelToBytes(buffer, level)
 	buffer = append(buffer, '"')
