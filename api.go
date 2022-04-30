@@ -23,6 +23,7 @@ type (
 		uint uint64
 		str  string
 		tm   time.Time
+		err  error
 	}
 	Level int8
 )
@@ -31,6 +32,8 @@ const (
 	LevelError Level = iota
 	LevelWarning
 	LevelDebug
+
+	LevelAll Level = 127
 )
 
 func New(writer io.Writer, level Level) Logger {

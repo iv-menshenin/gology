@@ -115,8 +115,15 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 			b = append(b, ib[ip:]...)
 
 		case !attr.tm.IsZero():
+			// allocations
 			b = append(b, '"')
 			b = append(b, attr.tm.String()...)
+			b = append(b, '"')
+
+		case attr.err != nil:
+			// allocations
+			b = append(b, '"')
+			b = safeStringAppend(b, attr.err.Error())
 			b = append(b, '"')
 
 		}

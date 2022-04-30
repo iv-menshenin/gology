@@ -41,3 +41,7 @@ func String(name, s string) Attr {
 func DateTime(name string, tm time.Time) Attr {
 	return Attr{name: name, tm: tm}
 }
+
+func Err(err error) Attr {
+	return Attr{name: "error", err: err}
+}

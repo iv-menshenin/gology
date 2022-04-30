@@ -3,9 +3,11 @@ package gology
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
+	// "github.com/rs/zerolog"
 )
 
 type nullWriter struct{}
@@ -14,9 +16,15 @@ func (w *nullWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func Benchmark_Logger(b *testing.B) {
+/*
+	cpu: Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz
+	Benchmark_GologyLogger-8         9410730               125.6 ns/op             0 B/op          0 allocs/op
+	Benchmark_ZeroLogger-8           1561195               876.7 ns/op           512 B/op          1 allocs/op
+*/
+
+func Benchmark_GologyLogger(b *testing.B) {
+	var log = New(&nullWriter{}, LevelAll)
 	for n := 0; n < b.N; n++ {
-		var log = New(&nullWriter{}, LevelDebug)
 		log.Write(
 			LevelDebug,
 			"some message to write into test message log hello",
@@ -48,6 +56,40 @@ func Benchmark_Logger(b *testing.B) {
 		log.Close()
 	}
 }
+
+//func Benchmark_ZeroLogger(b *testing.B) {
+//	var log = zerolog.New(&nullWriter{})
+//
+//	for n := 0; n < b.N; n++ {
+//		log.Debug().
+//			Str("debug", "some string attr! LevelDebug").
+//			Int("count", n+1024).
+//			Msg("some message to write into test message log hello")
+//
+//		func(log zerolog.Logger) {
+//			log.Error().
+//				Str("debug", "some string attr! LevelDebug").
+//				Int("count", n+1024).
+//				Msg("some message to write into test message log hello")
+//
+//			log.Warn().
+//				Str("debug", "some string attr! LevelDebug").
+//				Int("test", 19).
+//				Msg("repeat warning in nested")
+//		}(
+//			log.With().
+//				Str("test1", "nested value 1").
+//				Str("test2", "nested value 2").
+//				Logger(),
+//		)
+//
+//		log.Warn().
+//			Str("warning", "some string attr! LevelWarning").
+//			Int("count", n+1024).
+//			Msg("some message to write into test message log hello")
+//
+//	}
+//}
 
 func Test_Levels(t *testing.T) {
 	var writer = bytes.NewBuffer(make([]byte, 0, 65536))
@@ -153,6 +195,21 @@ func Test_Attrs(t *testing.T) {
 			"i16":     333,
 			"i32":     43564,
 			"i64":     654456,
+		})
+		log.Close()
+	})
+
+	t.Run("error", func(t *testing.T) {
+		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
+		var log = New(writer, LevelDebug)
+		log.Error(
+			"something went wrong",
+			Err(errors.New("fail io operations")),
+		)
+		testResult(t, writer.Bytes(), map[string]interface{}{
+			"level":   "ERROR",
+			"message": "something went wrong",
+			"error":   "fail io operations",
 		})
 		log.Close()
 	})
@@ -338,7 +395,7 @@ func testResult(t *testing.T, got []byte, want map[string]interface{}) {
 		t.Fatalf("error unmarshalling: %s\ndata: %s", err, string(got))
 	}
 	if !mapMatch(i, want) {
-		t.Errorf("matching error\n extra got: %+v\nextra want: %+v", want, i)
+		t.Errorf("matching error\n extra got: %+v\nextra want: %+v", i, want)
 	}
 }
 
