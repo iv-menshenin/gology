@@ -86,24 +86,28 @@ func attrsToJSON(b []byte, attrs ...Attr) []byte {
 }
 
 func attrToJSON(b []byte, attr Attr) []byte {
-	switch {
+	switch attr.typ {
 
-	case attr.str != "":
+	case attrString:
 		b = strAttrToJSON(b, attr.str)
 
-	case attr.int != 0:
+	case attrInt:
 		b = intAttrToJSON(b, attr.int)
 
-	case attr.uint != 0:
+	case attrUint:
 		b = uintAttrToJSON(b, attr.uint)
 
-	case !attr.tm.IsZero():
+	case attrTime:
 		// allocations
 		b = strAttrToJSON(b, attr.tm.String())
 
-	case attr.err != nil:
+	case attrError:
 		// allocations
-		b = strAttrToJSON(b, attr.err.Error())
+		if attr.err == nil {
+			b = append(b, "null"...)
+		} else {
+			b = strAttrToJSON(b, attr.err.Error())
+		}
 
 	}
 	return b
@@ -117,6 +121,10 @@ func strAttrToJSON(b []byte, attr string) []byte {
 }
 
 func intAttrToJSON(b []byte, attr int64) []byte {
+	if attr == 0 {
+		b = append(b, '0')
+		return b
+	}
 	var start = attr
 	var neg bool
 	if attr < 0 {
@@ -137,6 +145,10 @@ func intAttrToJSON(b []byte, attr int64) []byte {
 }
 
 func uintAttrToJSON(b []byte, attr uint64) []byte {
+	if attr == 0 {
+		b = append(b, '0')
+		return b
+	}
 	var ib [22]byte
 	var ip = 22
 	for n := attr; n > 0; n = n / 10 {
@@ -148,6 +160,9 @@ func uintAttrToJSON(b []byte, attr uint64) []byte {
 }
 
 func safeStringAppend(b []byte, s string) []byte {
+	if s == "" {
+		return b
+	}
 	var l int
 	for i, n := range s {
 		if n == '"' {

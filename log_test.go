@@ -143,16 +143,25 @@ func Test_Levels(t *testing.T) {
 
 func Test_Attrs(t *testing.T) {
 
-	t.Run("simple test", func(t *testing.T) {
+	t.Run("zero test", func(t *testing.T) {
 		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
 		var log = New(writer, LevelDebug)
-		log.Error("something went wrong", Int("count", 2), Int("wants", 99), String("info", "foo bar"))
+		log.Error(
+			"something went wrong",
+			UInt("count", 0),
+			Int("max", 100),
+			Int("wants", 0),
+			String("info", ""),
+			Err(nil),
+		)
 		testResult(t, writer.Bytes(), map[string]interface{}{
 			"level":   "ERROR",
 			"message": "something went wrong",
-			"count":   2,
-			"wants":   99,
-			"info":    "foo bar",
+			"count":   0,
+			"max":     100,
+			"wants":   0,
+			"info":    "",
+			"error":   nil,
 		})
 		log.Close()
 	})
@@ -164,7 +173,7 @@ func Test_Attrs(t *testing.T) {
 			"something went wrong",
 			Int("i", 2),
 			Int16("i16", -333),
-			Int32("i32", 43564),
+			Int32("i32", 43500),
 			Int64("i64", 654456),
 		)
 		testResult(t, writer.Bytes(), map[string]interface{}{
@@ -172,7 +181,7 @@ func Test_Attrs(t *testing.T) {
 			"message": "something went wrong",
 			"i":       2,
 			"i16":     -333,
-			"i32":     43564,
+			"i32":     43500,
 			"i64":     654456,
 		})
 		log.Close()

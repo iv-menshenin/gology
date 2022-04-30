@@ -18,13 +18,15 @@ type (
 	}
 	Attr struct {
 		name string
+		typ  attrType
 		int  int64
 		uint uint64
 		str  string
 		tm   time.Time
 		err  error
 	}
-	Level int8
+	Level    int8
+	attrType int8
 )
 
 const (
@@ -33,6 +35,12 @@ const (
 	LevelDebug
 
 	LevelAll Level = 127
+
+	attrString attrType = iota
+	attrInt
+	attrUint
+	attrTime
+	attrError
 )
 
 func New(writer io.Writer, level Level) Logger {
