@@ -1,9 +1,12 @@
 package gology
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"sync/atomic"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -103,10 +106,18 @@ func attrToJSON(b []byte, attr Attr) []byte {
 
 	case attrError:
 		// allocations
+		type stackTracer interface {
+			StackTrace() errors.StackTrace
+		}
 		if attr.err == nil {
 			b = append(b, "null"...)
-		} else {
-			b = strAttrToJSON(b, attr.err.Error())
+			break
+		}
+
+		b = strAttrToJSON(b, attr.err.Error())
+		if t, ok := attr.err.(stackTracer); ok {
+			b = append(b, ",\"stack\":"...)
+			b = strAttrToJSON(b, fmt.Sprintf("%+v", t.StackTrace()))
 		}
 
 	}
@@ -165,14 +176,21 @@ func safeStringAppend(b []byte, s string) []byte {
 	}
 	var l int
 	for i, n := range s {
-		if n == '"' {
+		switch n {
+
+		case '"':
 			b = append(b, s[l:i]...)
 			b = append(b, '\\', '"')
 			l = i + 1
-		}
-		if n == '\n' {
+
+		case '\n':
 			b = append(b, s[l:i]...)
 			b = append(b, '\\', 'n')
+			l = i + 1
+
+		case '\t':
+			b = append(b, s[l:i]...)
+			b = append(b, '\\', 't')
 			l = i + 1
 		}
 	}

@@ -3,10 +3,11 @@ package gology
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
+
+	errors "github.com/pkg/errors"
 	// "github.com/rs/zerolog"
 )
 
@@ -166,6 +167,24 @@ func Test_Attrs(t *testing.T) {
 		log.Close()
 	})
 
+	t.Run("error test", func(t *testing.T) {
+		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
+		var log = New(writer, LevelDebug)
+		log.Error(
+			"something went wrong",
+			Err(errors.WithStack(errors.New("error"))),
+		)
+		var i map[string]interface{}
+		var got = writer.Bytes()
+		if err := json.Unmarshal(got, &i); err != nil {
+			t.Fatalf("error unmarshalling: %s\ndata: %s", err, string(got))
+		}
+		if stack, ok := i["stack"]; !ok && stack.(string) == "" {
+			t.Fatalf("expected stack, got: %v", i["stack"])
+		}
+		log.Close()
+	})
+
 	t.Run("integers", func(t *testing.T) {
 		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
 		var log = New(writer, LevelDebug)
@@ -213,7 +232,7 @@ func Test_Attrs(t *testing.T) {
 		var log = New(writer, LevelDebug)
 		log.Error(
 			"something went wrong",
-			Err(errors.New("fail io operations")),
+			Err(fmt.Errorf("fail io operations")),
 		)
 		testResult(t, writer.Bytes(), map[string]interface{}{
 			"level":   "ERROR",
@@ -399,6 +418,7 @@ func Test_CloseLog(t *testing.T) {
 }
 
 func testResult(t *testing.T, got []byte, want map[string]interface{}) {
+	t.Helper()
 	var i map[string]interface{}
 	if err := json.Unmarshal(got, &i); err != nil {
 		t.Fatalf("error unmarshalling: %s\ndata: %s", err, string(got))
