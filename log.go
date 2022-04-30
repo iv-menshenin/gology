@@ -3,6 +3,7 @@ package gology
 import (
 	"io"
 	"log"
+	"sync/atomic"
 )
 
 const (
@@ -10,20 +11,25 @@ const (
 	defaultBufferSize = 1024
 )
 
-var pool = make(chan []byte, poolSize)
+var pool = make(chan reusable, poolSize)
 
 func newLogger() Logger {
+	// allocations
 	return Logger{
-		buffer: make([]byte, 0, defaultBufferSize), // alloc
+		reusable: reusable{
+			buffer: make([]byte, 0, defaultBufferSize),
+			closed: new(int64),
+		},
 	}
 }
 
 func acquireLogger() Logger {
 	select {
 
-	case buffer := <-pool:
+	case r := <-pool:
+		atomic.StoreInt64(r.closed, 0)
 		return Logger{
-			buffer: buffer,
+			reusable: r,
 		}
 
 	default:
@@ -31,11 +37,13 @@ func acquireLogger() Logger {
 	}
 }
 
-func releaseLogger(buffer []byte) {
+func releaseLogger(r reusable) {
+	atomic.StoreInt64(r.closed, 1)
+	r.buffer = r.buffer[:0]
 
 	select {
 
-	case pool <- buffer:
+	case pool <- r:
 		return
 
 	default:

@@ -2,15 +2,20 @@ package gology
 
 import (
 	"io"
+	"sync/atomic"
 	"time"
 )
 
 type (
 	Logger struct {
+		reusable
 		writer   io.Writer
 		logLevel Level
 		fixed    int
-		buffer   []byte
+	}
+	reusable struct {
+		buffer []byte
+		closed *int64
 	}
 	Attr struct {
 		name string
@@ -37,6 +42,9 @@ func New(writer io.Writer, level Level) Logger {
 }
 
 func (l Logger) Write(level Level, message string, attrs ...Attr) {
+	if atomic.LoadInt64(l.closed) != 0 {
+		return
+	}
 	if level > l.logLevel {
 		return
 	}
@@ -73,5 +81,5 @@ func (l Logger) WithAttrs(attrs ...Attr) Logger {
 }
 
 func (l Logger) Close() {
-	releaseLogger(l.buffer[:0])
+	releaseLogger(l.reusable)
 }
