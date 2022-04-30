@@ -37,7 +37,7 @@ But what we can really offer you is that it's easy to wrap your Logger with pres
 
 func somethingToDo(log Logger) {
     // something to do
-	log.Warning("some message")
+    log.Warning("some message")
 }
 
 func main(){
@@ -47,7 +47,7 @@ func main(){
         String("test2", "value 2"),
     ))
 
-	log.Warning("done")
+    log.Warning("done")
 }
 ```
 
