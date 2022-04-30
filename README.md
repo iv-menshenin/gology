@@ -1,7 +1,28 @@
 # gology (Really Zero Allocation JSON Logger)
 
+## Really fast
+
 Take a look at proofs:
 
 	cpu: Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz
 	Benchmark_GologyLogger-8         9410730               125.6 ns/op             0 B/op          0 allocs/op
 	Benchmark_ZeroLogger-8           1561195               876.7 ns/op           512 B/op          1 allocs/op
+
+
+## Features
+
+`Gology' is a simple package without any complicated features. No hooks or embeddings into other commonly used systems. We only support JSON output and a fairly narrow range of data types here. No Any or empty interfaces.
+
+```go
+    log := New(os.StdOut, LevelAll)
+    log.Write(
+        LevelDebug,
+        "some message to write into the output",
+        String("attr_str", "some string attribute"),
+        Int("count", 1024),
+    )
+```
+
+output:
+
+    {"message":"some message to write into the output","level":"DEBUG","attr_str":"some string attribute","count":1024}
