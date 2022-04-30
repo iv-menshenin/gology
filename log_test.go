@@ -16,9 +16,12 @@ func (w *nullWriter) Write(p []byte) (n int, err error) {
 
 // WriteOut and JSON
 // Benchmark_Logger-8   	 3752178	       310.3 ns/op	      32 B/op	       1 allocs/op
+// updated with pool for *Logger
+// Benchmark_Logger-8   	 4367666	       277.9 ns/op	       0 B/op	       0 allocs/op
 
 // NESTED
 // Benchmark_Logger-8   	 3735806	       330.1 ns/op	      96 B/op	       3 allocs/op
+// Benchmark_Logger-8   	 2433858	       497.3 ns/op	       0 B/op	       0 allocs/op
 
 func Benchmark_Logger(b *testing.B) {
 	for n := 0; n < b.N; n++ {
@@ -29,7 +32,7 @@ func Benchmark_Logger(b *testing.B) {
 			String("debug", "some string attr! LevelDebug"),
 			Int("count", n+1024),
 		)
-		func(log *Logger) {
+		func(log Logger) {
 			log.Write(
 				LevelError,
 				"some message to write into test message log hello",

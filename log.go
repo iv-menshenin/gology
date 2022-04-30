@@ -5,37 +5,37 @@ import (
 	"log"
 )
 
-var bufferPool = make(chan *buffer, 10)
+const (
+	poolSize          = 100
+	defaultBufferSize = 1024
+)
 
-type buffer struct {
-	f int
-	b []byte
-}
+var pool = make(chan []byte, poolSize)
 
-func newBuff() *buffer {
-	return &buffer{
-		b: make([]byte, 0, 1024),
+func newLogger() Logger {
+	return Logger{
+		buffer: make([]byte, 0, defaultBufferSize), // alloc
 	}
 }
 
-func acquireBuff() *buffer {
+func acquireLogger() Logger {
 	select {
 
-	case a := <-bufferPool:
-		return a
+	case buffer := <-pool:
+		return Logger{
+			buffer: buffer,
+		}
 
 	default:
-		return newBuff()
+		return newLogger()
 	}
 }
 
-func releaseBuff(b *buffer) {
-	b.f = 0
-	b.b = b.b[:0]
+func releaseLogger(buffer []byte) {
 
 	select {
 
-	case bufferPool <- b:
+	case pool <- buffer:
 		return
 
 	default:
@@ -43,60 +43,10 @@ func releaseBuff(b *buffer) {
 	}
 }
 
-func (b *buffer) prepare() {
-	b.b = b.b[:b.f]
-}
-
-func (b *buffer) fix(data ...byte) {
-	b.f += len(data)
-	b.b = append(b.b, data...)
-}
-
-func New(writer io.Writer, level Level) *Logger {
-	var l = Logger{
-		writer:   writer,
-		buffer:   acquireBuff(),
-		logLevel: level,
-	}
-	l.buffer.fix('{')
-	return &l
-}
-
-type (
-	Logger struct {
-		writer   io.Writer
-		buffer   *buffer
-		logLevel Level
-	}
-	Attr struct {
-		name string
-		int  int64
-		str  string
-	}
-	Level int8
-)
-
-const (
-	LevelError Level = iota
-	LevelWarning
-	LevelDebug
-)
-
-func (l *Logger) Write(level Level, message string, attrs ...Attr) {
-	if level > l.logLevel {
-		return
-	}
-	l.buffer.b = append(l.buffer.b, "\"message\":\""...)
-	l.buffer.b = append(l.buffer.b, message...)
-	l.buffer.b = append(l.buffer.b, "\",\"level\":\""...)
-	l.buffer.b = levelToBytes(l.buffer.b, level)
-	l.buffer.b = append(l.buffer.b, '"')
-	l.buffer.b = attrsToJson(l.buffer.b, attrs...)
-	l.buffer.b = append(l.buffer.b, '}')
-	if _, err := l.writer.Write(l.buffer.b); err != nil {
+func write(writer io.Writer, message []byte) {
+	if _, err := writer.Write(message); err != nil {
 		log.Printf("cannot write message to logfile: %v", err)
 	}
-	l.buffer.prepare()
 }
 
 func levelToBytes(b []byte, l Level) []byte {
@@ -111,29 +61,14 @@ func levelToBytes(b []byte, l Level) []byte {
 	return append(b, "UNKNOWN"...)
 }
 
-func (l *Logger) Error(message string, attrs ...Attr) {
-	l.Write(LevelError, message, attrs...)
-}
-
-func (l *Logger) Warning(message string, attrs ...Attr) {
-	l.Write(LevelWarning, message, attrs...)
-}
-
-func (l *Logger) Debug(message string, attrs ...Attr) {
-	l.Write(LevelDebug, message, attrs...)
-}
-
-func Int(name string, i int) Attr {
-	return Attr{name: name, int: int64(i)}
-}
-
-func String(name, s string) Attr {
-	return Attr{name: name, str: s}
-}
-
 func attrsToJson(b []byte, attrs ...Attr) []byte {
+	var needSep = len(b) > 0 && b[len(b)-1] != '{'
 	for _, attr := range attrs {
-		b = append(b, ',', '"')
+		if needSep {
+			b = append(b, ',')
+		}
+		needSep = true
+		b = append(b, '"')
 		b = append(b, attr.name...)
 		b = append(b, '"', ':')
 
@@ -155,20 +90,4 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 		}
 	}
 	return b
-}
-
-func (l *Logger) WithAttrs(attrs ...Attr) *Logger {
-	var b = *l.buffer
-	var logger = Logger{
-		writer:   l.writer,
-		buffer:   &b,
-		logLevel: l.logLevel,
-	}
-	logger.buffer.fix(attrsToJson(make([]byte, 0, 256), attrs...)[1:]...) // todo ALLOC HERE
-	logger.buffer.fix(',')
-	return &logger
-}
-
-func (l *Logger) Close() {
-	releaseBuff(l.buffer)
 }
