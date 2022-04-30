@@ -80,14 +80,39 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 			b = append(b, '"')
 
 		case attr.int != 0:
-			var ib [20]byte
-			var ip = 20
-			for n := attr.int; n > 0; n = n / 10 {
+			var start = attr.int
+			var neg bool
+			if attr.int < 0 {
+				neg = true
+				start = start * -1
+			}
+			var ib [22]byte
+			var ip = 22
+			for n := start; n > 0; n = n / 10 {
+				ip--
+				ib[ip] = byte(rune('0' + n%10))
+			}
+			if neg {
+				b = append(b, '-')
+			}
+			b = append(b, ib[ip:]...)
+
+		case attr.uint != 0:
+			var ib [22]byte
+			var ip = 22
+			for n := attr.uint; n > 0; n = n / 10 {
 				ip--
 				ib[ip] = byte(rune('0' + n%10))
 			}
 			b = append(b, ib[ip:]...)
+
+		case !attr.tm.IsZero():
+			b = append(b, '"')
+			b = append(b, attr.tm.String()...)
+			b = append(b, '"')
+
 		}
+
 	}
 	return b
 }

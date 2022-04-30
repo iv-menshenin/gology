@@ -1,6 +1,9 @@
 package gology
 
-import "io"
+import (
+	"io"
+	"time"
+)
 
 type (
 	Logger struct {
@@ -12,7 +15,9 @@ type (
 	Attr struct {
 		name string
 		int  int64
+		uint uint64
 		str  string
+		tm   time.Time
 	}
 	Level int8
 )
