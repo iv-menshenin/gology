@@ -26,3 +26,32 @@ Take a look at proofs:
 output:
 
     {"message":"some message to write into the output","level":"DEBUG","attr_str":"some string attribute","count":1024}
+
+## Go-Routines
+
+In real life, a program includes several threads in which functions are executed sequentially or call each other, or all in a jumble. We do not support safe calling of the same object from different go-routines, so you must create your own Logger for each routine.
+
+But what we can really offer you is that it's easy to wrap your Logger with preset values, which won't be written immediately. The values will be implied inside the function call branch until you exit the function to which such values have been passed.
+
+```go
+
+func somethingToDo(log Logger) {
+    // something to do
+	log.Warning("some message")
+}
+
+func main(){
+    // something to do
+    somethingToDo(log.WithAttrs(
+        String("test1", "value 1"),
+        String("test2", "value 2"),
+    ))
+
+	log.Warning("done")
+}
+```
+
+output:
+
+    {"message":"some message","level":"WARNING","test1":"value 1","test2":"value 2"}
+    {"message":"done"}
