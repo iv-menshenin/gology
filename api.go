@@ -11,7 +11,6 @@ type (
 		reusable
 		writer   io.Writer
 		logLevel Level
-		fixed    int
 	}
 	reusable struct {
 		buffer []byte
