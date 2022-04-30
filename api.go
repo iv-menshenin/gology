@@ -60,7 +60,7 @@ func (l Logger) Write(level Level, message string, attrs ...Attr) {
 	buffer = append(buffer, "\",\"level\":\""...)
 	buffer = levelToBytes(buffer, level)
 	buffer = append(buffer, '"')
-	buffer = attrsToJson(buffer, attrs...)
+	buffer = attrsToJSON(buffer, attrs...)
 	buffer = append(buffer, '}')
 	write(writer, buffer)
 }
@@ -78,7 +78,7 @@ func (l Logger) Debug(message string, attrs ...Attr) {
 }
 
 func (l Logger) WithAttrs(attrs ...Attr) Logger {
-	l.buffer = attrsToJson(l.buffer, attrs...)
+	l.buffer = attrsToJSON(l.buffer, attrs...)
 	return l
 }
 

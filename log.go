@@ -11,6 +11,7 @@ const (
 	defaultBufferSize = 1024
 )
 
+//nolint:gochecknoglobals
 var pool = make(chan reusable, poolSize)
 
 func newLogger() Logger {
@@ -69,7 +70,7 @@ func levelToBytes(b []byte, l Level) []byte {
 	return append(b, "UNKNOWN"...)
 }
 
-func attrsToJson(b []byte, attrs ...Attr) []byte {
+func attrsToJSON(b []byte, attrs ...Attr) []byte {
 	var needSep = len(b) > 0 && b[len(b)-1] != '{'
 	for _, attr := range attrs {
 		if needSep {
@@ -79,56 +80,70 @@ func attrsToJson(b []byte, attrs ...Attr) []byte {
 		b = append(b, '"')
 		b = append(b, attr.name...)
 		b = append(b, '"', ':')
+		b = attrToJSON(b, attr)
+	}
+	return b
+}
 
-		switch {
+func attrToJSON(b []byte, attr Attr) []byte {
+	switch {
 
-		case attr.str != "":
-			b = append(b, '"')
-			b = safeStringAppend(b, attr.str)
-			b = append(b, '"')
+	case attr.str != "":
+		b = strAttrToJSON(b, attr.str)
 
-		case attr.int != 0:
-			var start = attr.int
-			var neg bool
-			if attr.int < 0 {
-				neg = true
-				start = start * -1
-			}
-			var ib [22]byte
-			var ip = 22
-			for n := start; n > 0; n = n / 10 {
-				ip--
-				ib[ip] = byte(rune('0' + n%10))
-			}
-			if neg {
-				b = append(b, '-')
-			}
-			b = append(b, ib[ip:]...)
+	case attr.int != 0:
+		b = intAttrToJSON(b, attr.int)
 
-		case attr.uint != 0:
-			var ib [22]byte
-			var ip = 22
-			for n := attr.uint; n > 0; n = n / 10 {
-				ip--
-				ib[ip] = byte(rune('0' + n%10))
-			}
-			b = append(b, ib[ip:]...)
+	case attr.uint != 0:
+		b = uintAttrToJSON(b, attr.uint)
 
-		case !attr.tm.IsZero():
-			// allocations
-			b = append(b, '"')
-			b = append(b, attr.tm.String()...)
-			b = append(b, '"')
+	case !attr.tm.IsZero():
+		// allocations
+		b = strAttrToJSON(b, attr.tm.String())
 
-		case attr.err != nil:
-			// allocations
-			b = append(b, '"')
-			b = safeStringAppend(b, attr.err.Error())
-			b = append(b, '"')
-
-		}
+	case attr.err != nil:
+		// allocations
+		b = strAttrToJSON(b, attr.err.Error())
 
 	}
+	return b
+}
+
+func strAttrToJSON(b []byte, attr string) []byte {
+	b = append(b, '"')
+	b = safeStringAppend(b, attr)
+	b = append(b, '"')
+	return b
+}
+
+func intAttrToJSON(b []byte, attr int64) []byte {
+	var start = attr
+	var neg bool
+	if attr < 0 {
+		neg = true
+		start = start * -1
+	}
+	var ib [22]byte
+	var ip = 22
+	for n := start; n > 0; n = n / 10 {
+		ip--
+		ib[ip] = byte(rune('0' + n%10))
+	}
+	if neg {
+		b = append(b, '-')
+	}
+	b = append(b, ib[ip:]...)
+	return b
+}
+
+func uintAttrToJSON(b []byte, attr uint64) []byte {
+	var ib [22]byte
+	var ip = 22
+	for n := attr; n > 0; n = n / 10 {
+		ip--
+		ib[ip] = byte(rune('0' + n%10))
+	}
+	b = append(b, ib[ip:]...)
 	return b
 }
 
@@ -138,6 +153,11 @@ func safeStringAppend(b []byte, s string) []byte {
 		if n == '"' {
 			b = append(b, s[l:i]...)
 			b = append(b, '\\', '"')
+			l = i + 1
+		}
+		if n == '\n' {
+			b = append(b, s[l:i]...)
+			b = append(b, '\\', 'n')
 			l = i + 1
 		}
 	}
