@@ -106,19 +106,7 @@ func attrToJSON(b []byte, attr Attr) []byte {
 
 	case attrError:
 		// allocations
-		type stackTracer interface {
-			StackTrace() errors.StackTrace
-		}
-		if attr.err == nil {
-			b = append(b, "null"...)
-			break
-		}
-
-		b = strAttrToJSON(b, attr.err.Error())
-		if t, ok := attr.err.(stackTracer); ok {
-			b = append(b, ",\"stack\":"...)
-			b = strAttrToJSON(b, fmt.Sprintf("%+v", t.StackTrace()))
-		}
+		b = errAttrToJSON(b, attr.err)
 
 	}
 	return b
@@ -195,4 +183,20 @@ func safeStringAppend(b []byte, s string) []byte {
 		}
 	}
 	return append(b, s[l:]...)
+}
+
+func errAttrToJSON(b []byte, attr error) []byte {
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+	if attr == nil {
+		return append(b, "null"...)
+	}
+
+	b = strAttrToJSON(b, attr.Error())
+	if t, ok := attr.(stackTracer); ok {
+		b = append(b, ",\"stack\":"...)
+		b = strAttrToJSON(b, fmt.Sprintf("%+v", t.StackTrace()))
+	}
+	return b
 }
