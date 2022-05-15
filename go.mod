@@ -1,4 +1,4 @@
-module gology
+module github.com/iv-menshenin/gology
 
 go 1.17
 
