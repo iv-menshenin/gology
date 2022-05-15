@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ func (w *nullWriter) Write(p []byte) (n int, err error) {
 
 /*
 	cpu: Intel(R) Core(TM) i7-9700F CPU @ 3.00GHz
-	Benchmark_GologyLogger-8         9410730               125.6 ns/op             0 B/op          0 allocs/op
+	Benchmark_GologyLogger-8         6980311               171.7 ns/op             0 B/op          0 allocs/op
 	Benchmark_ZeroLogger-8           1561195               876.7 ns/op           512 B/op          1 allocs/op
 */
 
@@ -31,6 +32,7 @@ func Benchmark_GologyLogger(b *testing.B) {
 			"some message to write into test message log hello",
 			String("debug", "some string attr! LevelDebug"),
 			Int("count", n+1024),
+			Float32("rate", 56.66),
 		)
 		func(log Logger) {
 			log.Write(
@@ -43,6 +45,7 @@ func Benchmark_GologyLogger(b *testing.B) {
 				LevelWarning,
 				"repeat warning in nested",
 				Int("test", 19),
+				Float64("rate", math.MaxFloat64),
 			)
 		}(log.WithAttrs(
 			String("test1", "nested value 1"),
@@ -153,6 +156,7 @@ func Test_Attrs(t *testing.T) {
 			Int("max", 100),
 			Int("wants", 0),
 			String("info", ""),
+			Float64("float", 0),
 			Err(nil),
 		)
 		testResult(t, writer.Bytes(), map[string]interface{}{
@@ -162,6 +166,7 @@ func Test_Attrs(t *testing.T) {
 			"max":     100,
 			"wants":   0,
 			"info":    "",
+			"float":   0,
 			"error":   nil,
 		})
 		log.Close()
@@ -254,6 +259,27 @@ func Test_Attrs(t *testing.T) {
 			"level":   "ERROR",
 			"message": "something went wrong",
 			"date":    tm.String(),
+		})
+		log.Close()
+	})
+
+	t.Run("floats", func(t *testing.T) {
+		var writer = bytes.NewBuffer(make([]byte, 0, 65536))
+		var log = New(writer, LevelDebug)
+		log.Error(
+			"something went wrong",
+			Float64("f1", 999.999),
+			Float32("f2", 999.999),
+			Float64("f3", 1.123456789),
+			Float64("f4", math.MaxFloat64),
+		)
+		testResult(t, writer.Bytes(), map[string]interface{}{
+			"level":   "ERROR",
+			"message": "something went wrong",
+			"f1":      999.999,
+			"f2":      999.999,
+			"f3":      1.1234,
+			"f4":      math.MaxFloat64,
 		})
 		log.Close()
 	})

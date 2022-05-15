@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -108,6 +110,9 @@ func attrToJSON(b []byte, attr Attr) []byte {
 		// allocations
 		b = errAttrToJSON(b, attr.err)
 
+	case attrFloat:
+		b = floatAttrToJSON(b, attr.flt)
+
 	}
 	return b
 }
@@ -198,5 +203,32 @@ func errAttrToJSON(b []byte, attr error) []byte {
 		b = append(b, ",\"stack\":"...)
 		b = strAttrToJSON(b, fmt.Sprintf("%+v", t.StackTrace()))
 	}
+	return b
+}
+
+func floatAttrToJSON(b []byte, attr float64) []byte {
+	if attr > math.MaxInt64 {
+		s := strconv.FormatFloat(attr, 'f', 4, 64)
+		return append(b, s...)
+	}
+	var (
+		i = int64(attr)
+		f = int64((attr - float64(i)) * 10000)
+	)
+	if f < 0 {
+		f *= -1
+	}
+	b = intAttrToJSON(b, i)
+	b = append(b, '.')
+	if f < 1000 {
+		b = append(b, '0')
+	}
+	if f < 100 {
+		b = append(b, '0')
+	}
+	if f < 10 {
+		b = append(b, '0')
+	}
+	b = intAttrToJSON(b, f)
 	return b
 }

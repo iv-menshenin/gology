@@ -21,6 +21,7 @@ type (
 		typ  attrType
 		int  int64
 		uint uint64
+		flt  float64
 		str  string
 		tm   time.Time
 		err  error
@@ -37,6 +38,7 @@ const (
 	LevelAll Level = 127
 
 	attrString attrType = iota
+	attrFloat
 	attrInt
 	attrUint
 	attrTime

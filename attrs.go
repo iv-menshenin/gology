@@ -45,3 +45,11 @@ func DateTime(name string, tm time.Time) Attr {
 func Err(err error) Attr {
 	return Attr{name: "error", typ: attrError, err: err}
 }
+
+func Float64(name string, f float64) Attr {
+	return Attr{name: name, typ: attrFloat, flt: f}
+}
+
+func Float32(name string, f float32) Attr {
+	return Attr{name: name, typ: attrFloat, flt: float64(f)}
+}
