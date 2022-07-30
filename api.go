@@ -33,6 +33,7 @@ type (
 const (
 	LevelError Level = iota
 	LevelWarning
+	LevelInfo
 	LevelDebug
 
 	LevelAll Level = 127
@@ -71,7 +72,7 @@ func (l Logger) Write(level Level, message string, attrs ...Attr) {
 	buffer = levelToBytes(buffer, level)
 	buffer = append(buffer, '"')
 	buffer = attrsToJSON(buffer, attrs...)
-	buffer = append(buffer, '}')
+	buffer = append(buffer, "}\n"...)
 	write(writer, buffer)
 }
 
@@ -81,6 +82,10 @@ func (l Logger) Error(message string, attrs ...Attr) {
 
 func (l Logger) Warning(message string, attrs ...Attr) {
 	l.Write(LevelWarning, message, attrs...)
+}
+
+func (l Logger) Info(message string, attrs ...Attr) {
+	l.Write(LevelInfo, message, attrs...)
 }
 
 func (l Logger) Debug(message string, attrs ...Attr) {
