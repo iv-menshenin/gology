@@ -69,6 +69,8 @@ func levelToBytes(b []byte, l Level) []byte {
 		return append(b, "ERROR"...)
 	case LevelWarning:
 		return append(b, "WARNING"...)
+	case LevelInfo:
+		return append(b, "INFO"...)
 	case LevelDebug:
 		return append(b, "DEBUG"...)
 	}
